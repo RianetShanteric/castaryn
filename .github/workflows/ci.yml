@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.9.0
       - uses: actions/setup-node@v4
@@ -80,7 +80,7 @@ jobs:
       CREATOR_TEST_DATABASE_URL: postgres://castaryn:integration@127.0.0.1:5432/castaryn_test
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.9.0
       - uses: actions/setup-node@v4
@@ -112,7 +112,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.9.0
       - uses: actions/setup-node@v4
