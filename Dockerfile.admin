@@ -25,7 +25,7 @@ RUN node -e "process.stdout.write(new URL(process.env.VITE_ADMIN_API_URL).origin
     -e "s#__ADMIN_OIDC_ORIGIN__#$(cat /tmp/admin_oidc_origin)#g" \
     apps/admin/security-headers.conf.template > apps/admin/security-headers.conf
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY --from=build --chown=101:101 --chmod=644 /workspace/apps/admin/security-headers.conf /etc/nginx/security-headers.conf
 COPY --chown=101:101 --chmod=644 apps/admin/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build --chown=101:101 /workspace/apps/admin/dist /usr/share/nginx/html
