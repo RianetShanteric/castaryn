@@ -1,0 +1,26 @@
+{
+  "name": "@castaryn/site",
+  "private": true,
+  "version": "0.1.6",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && vite build",
+    "check": "tsc --noEmit",
+    "dev": "vite --host 127.0.0.1 --port 4330"
+  },
+  "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "keycloak-js": "^26.2.4",
+    "motion": "^12.43.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.3.6"
+  }
+}
