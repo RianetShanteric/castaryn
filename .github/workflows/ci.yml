@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build
+      - run: pnpm creator:build
+      - run: pnpm admin:build
+      - run: cargo fmt --check --manifest-path src-tauri/Cargo.toml
+      - run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+      - run: cargo check --locked --manifest-path src-tauri/Cargo.toml
+      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+      - uses: rustsec/audit-check@v2
+        with:
+          working-directory: src-tauri
+      - name: Check tracked files and dependency vulnerabilities
+        shell: pwsh
+        run: ./scripts/security-check.ps1
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan full git history for secrets
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest \
+            detect --source /repo --log-opts=--all -v
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: castaryn
+          POSTGRES_PASSWORD: integration
+          POSTGRES_DB: castaryn_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U castaryn -d castaryn_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      CREATOR_DATABASE_URL: postgres://castaryn:integration@127.0.0.1:5432/castaryn_test
+      CREATOR_TEST_DATABASE_URL: postgres://castaryn:integration@127.0.0.1:5432/castaryn_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @castaryn/creator-api migrate
+      - name: Verify migrations are idempotent
+        run: pnpm --filter @castaryn/creator-api migrate
+      - run: pnpm --filter @castaryn/creator-api test
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build creator-api image
+        run: docker build -f Dockerfile.creator -t castaryn-creator-api:ci .
+      - name: Build admin image
+        run: |
+          docker build -f Dockerfile.admin -t castaryn-admin:ci \
+            --build-arg VITE_ADMIN_API_URL=https://creator-api.ci.invalid \
+            --build-arg VITE_ADMIN_OIDC_AUTHORITY=https://identity.ci.invalid \
+            --build-arg VITE_ADMIN_OIDC_CLIENT_ID=ci-placeholder \
+            --build-arg VITE_ADMIN_OIDC_AUDIENCE=ci-placeholder \
+            .
+
+  windows-desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm tauri build --no-bundle
+      - name: Verify the NSIS installer packages (unsigned)
+        run: pnpm tauri build --bundles nsis
