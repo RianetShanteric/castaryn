@@ -9,7 +9,7 @@ RUN pnpm install --frozen-lockfile
 COPY apps/telegram-admin apps/telegram-admin
 RUN pnpm --filter @castaryn/telegram-admin build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 COPY apps/telegram-admin/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/apps/telegram-admin/dist /usr/share/nginx/html/tg
 USER nginx
